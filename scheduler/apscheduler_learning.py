@@ -9,23 +9,39 @@
 @License :   (C) Copyright 2019-2020, App Annie Inc.
 @Desc    :
 """
-
+import datetime
 import os
+import random
 import threading
 import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 
-def job():
-    print(
-        'Time: {0}: job thread_id-{1}, process_id-{2}'.format(
-            round(time.time(), 3),
-            threading.get_ident(),
-            os.getpid()
+def job(job_name):
+    with open(job_name + ".log", 'a+') as f:
+        f.write(
+            'Start Time: {0}: job name-{1} thread_id-{2}, process_id-{3}'.format(
+                str(datetime.datetime.now()),
+                job_name,
+                threading.get_ident(),
+                os.getpid()
+            )
         )
-    )
-    time.sleep(5)
+    num = random.randint(0, 1000)
+    time.sleep(num)
+    if num % 10 == 0:
+        raise RuntimeError("random exception!")
+    with open(job_name + ".log", 'a+') as f:
+        f.write(
+            'End Time: {0}: job name-{1} thread_id-{2}, process_id-{3}'.format(
+                str(datetime.datetime.now()),
+                job_name,
+                threading.get_ident(),
+                os.getpid()
+            )
+        )
 
 
 if __name__ == '__main__':
@@ -33,13 +49,18 @@ if __name__ == '__main__':
     sched = BackgroundScheduler(timezone='UTC')
     for i in range(0, 10):
         job_name = "Job-{0}".format(i)
-        sched.add_job(job, 'interval', seconds=10, name=job_name)
+        sched.add_job(
+            job,
+            kwargs={
+                "job_name": job_name
+            },
+            trigger=CronTrigger.from_crontab("*/5 * * * *"),
+            name=job_name
+        )
     sched.start()
 
     while True:
-        print(
-            'main 1s: {0}'.format(round(time.time(), 3))
-        )
+        # print(
+        #     'main 1s: {0}'.format(round(time.time(), 3))
+        # )
         time.sleep(1)
-
-
